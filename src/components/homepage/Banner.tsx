@@ -14,7 +14,7 @@ const Banner = () => {
         </div>
 
         <div>
-          <Image className='p-4' src={bannerImg}></Image>
+          <Image className='p-4' src={bannerImg} alt='bannerImage'></Image>
         </div>
       </div>
     </section>
