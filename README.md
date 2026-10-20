@@ -95,14 +95,176 @@ These collections support:
 - Duplicate prevention
 - Conditional button states
 
-## Example Usage
+### Collection state and helper functions
 
-From the book details page:
+Use the existing collection state in `BooksContext` and add helper functions for add/remove actions. This keeps the logic central and works cleanly with the book detail buttons.
 
-- Click "Add to Read Books" to add a book to the read list
-- Click "Remove from Read Books" to delete it
-- Click "Add to Wishlist" to save a book for later
-- Click "Remove from Wishlist" to remove it
+```tsx
+"use client";
+
+import React, { createContext, ReactNode, useState } from "react";
+import { Ibook } from "@/type/books.type";
+
+type CollectionType = "readBooks" | "wishlist";
+
+interface IBooksContext {
+  readBooks: Ibook[];
+  wishlist: Ibook[];
+  setReadBooks: React.Dispatch<React.SetStateAction<Ibook[]>>;
+  setWishlist: React.Dispatch<React.SetStateAction<Ibook[]>>;
+  addBookToCollection: (book: Ibook, type: CollectionType) => void;
+  removeBookFromCollection: (bookId: number, type: CollectionType) => void;
+  isBookInCollection: (bookId: number, type: CollectionType) => boolean;
+}
+
+export const BooksContext = createContext<IBooksContext>({
+  readBooks: [],
+  wishlist: [],
+  setReadBooks: () => {},
+  setWishlist: () => {},
+  addBookToCollection: () => {},
+  removeBookFromCollection: () => {},
+  isBookInCollection: () => false,
+});
+
+const BooksProvider = ({ children }: { children: ReactNode }) => {
+  const [readBooks, setReadBooks] = useState<Ibook[]>([]);
+  const [wishlist, setWishlist] = useState<Ibook[]>([]);
+
+  const addBookToCollection = (book: Ibook, type: CollectionType) => {
+    if (type === "readBooks") {
+      setReadBooks((prev) =>
+        prev.some((item) => item.bookId === book.bookId)
+          ? prev
+          : [...prev, book]
+      );
+      return;
+    }
+
+    setWishlist((prev) =>
+      prev.some((item) => item.bookId === book.bookId)
+        ? prev
+        : [...prev, book]
+    );
+  };
+
+  const removeBookFromCollection = (bookId: number, type: CollectionType) => {
+    if (type === "readBooks") {
+      setReadBooks((prev) => prev.filter((item) => item.bookId !== bookId));
+      return;
+    }
+
+    setWishlist((prev) => prev.filter((item) => item.bookId !== bookId));
+  };
+
+  const isBookInCollection = (bookId: number, type: CollectionType) => {
+    if (type === "readBooks") {
+      return readBooks.some((book) => book.bookId === bookId);
+    }
+
+    return wishlist.some((book) => book.bookId === bookId);
+  };
+
+  const shareData = {
+    readBooks,
+    wishlist,
+    setReadBooks,
+    setWishlist,
+    addBookToCollection,
+    removeBookFromCollection,
+    isBookInCollection,
+  };
+
+  return (
+    <BooksContext.Provider value={shareData}>
+      {children}
+    </BooksContext.Provider>
+  );
+};
+
+export default BooksProvider;
+```
+
+### Example: Read button toggle
+
+```tsx
+"use client";
+
+import { BooksContext } from "@/context/BooksContext";
+import { Ibook } from "@/type/books.type";
+import React, { useContext } from "react";
+
+const ReadButton = ({ book }: { book: Ibook }) => {
+  const { readBooks, addBookToCollection, removeBookFromCollection } =
+    useContext(BooksContext);
+
+  const exists = readBooks.some((item) => item.bookId === book.bookId);
+
+  const handleToggleRead = () => {
+    if (exists) {
+      removeBookFromCollection(book.bookId, "readBooks");
+      return;
+    }
+
+    addBookToCollection(book, "readBooks");
+  };
+
+  return (
+    <button
+      onClick={handleToggleRead}
+      className={`btn ${exists ? "btn-error" : "btn-success"}`}
+    >
+      {exists ? "Remove from Read Books" : "Add to Read Books"}
+    </button>
+  );
+};
+
+export default ReadButton;
+```
+
+### Example: Wishlist button toggle
+
+```tsx
+"use client";
+
+import { BooksContext } from "@/context/BooksContext";
+import { Ibook } from "@/type/books.type";
+import React, { useContext } from "react";
+
+const WishlistButton = ({ book }: { book: Ibook }) => {
+  const { wishlist, addBookToCollection, removeBookFromCollection } =
+    useContext(BooksContext);
+
+  const exists = wishlist.some((item) => item.bookId === book.bookId);
+
+  const handleToggleWishlist = () => {
+    if (exists) {
+      removeBookFromCollection(book.bookId, "wishlist");
+      return;
+    }
+
+    addBookToCollection(book, "wishlist");
+  };
+
+  return (
+    <button
+      onClick={handleToggleWishlist}
+      className={`btn ${exists ? "btn-warning" : "btn-outline btn-warning"}`}
+    >
+      {exists ? "Remove from Wishlist" : "Add to Wishlist"}
+    </button>
+  );
+};
+
+export default WishlistButton;
+```
+
+This gives you the full add/remove collection flow in TypeScript:
+
+- Add book to collection
+- Remove from collection
+- Prevent duplicates
+- Toggle button label based on current state
 
 ## Deployment
 
